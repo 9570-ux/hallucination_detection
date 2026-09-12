@@ -14,7 +14,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn import GATConv, global_mean_pool
 import wikipedia
 
-# Set seeds for reproducibility
+# Set seeds 
 SEED = 42
 torch.manual_seed(SEED)
 np.random.seed(SEED)
@@ -34,7 +34,7 @@ except ImportError:
 
 st.set_page_config(
     page_title="Hallucination Detection in LLM using GNN",
-    page_icon="🧠",
+    page_icon="",
     layout="wide"
 )
 
@@ -706,39 +706,94 @@ def build_graph(claim, evidence_list, embedder):
     return data
 
 def visualize_claim_evidence_graph(claim, evidence_list):
-    G = nx.Graph()
-    G.add_node(0, label=f"CLAIM: {claim[:50]}...", type="claim")
-    for i, ev in enumerate(evidence_list, 1):
-        G.add_node(i, label=f"EV{i}: {ev[:50]}...", type="evidence")
-    
-    for i in range(1, len(evidence_list) + 1):
-        G.add_edge(0, i)
-    
-    pos = nx.spring_layout(G, seed=SEED)
-    
+    import math
+
+    # Filter valid evidence
+    clean_ev = [ev for ev in evidence_list if ev and ev.strip() and ev != "No evidence found."]
+    if not clean_ev:
+        clean_ev = ["No evidence found"]
+
+    n = len(clean_ev)
+
+    # Circular layout
+    angles  = [2 * math.pi * i / n for i in range(n)]
+    ev_x    = [round(math.cos(a) * 2.5, 3) for a in angles]
+    ev_y    = [round(math.sin(a) * 2.5, 3) for a in angles]
+
+    # Build edge lines
     edge_x, edge_y = [], []
-    for edge in G.edges():
-        x0, y0 = pos[edge[0]]
-        x1, y1 = pos[edge[1]]
-        edge_x.extend([x0, x1, None])
-        edge_y.extend([y0, y1, None])
-    
-    node_x = [pos[node][0] for node in G.nodes()]
-    node_y = [pos[node][1] for node in G.nodes()]
-    node_text = [G.nodes[node]['label'] for node in G.nodes()]
-    node_color = ['red' if G.nodes[node]['type'] == 'claim' else 'blue' for node in G.nodes()]
-    
+    for i in range(n):
+        edge_x += [0.0, ev_x[i], None]
+        edge_y += [0.0, ev_y[i], None]
+
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=edge_x, y=edge_y, mode='lines', line=dict(width=1, color='gray'), showlegend=False))
-    fig.add_trace(go.Scatter(x=node_x, y=node_y, mode='markers+text', 
-                            marker=dict(size=20, color=node_color),
-                            text=node_text, textposition="middle center",
-                            showlegend=False))
-    
-    fig.update_layout(title="Claim-Evidence Graph", showlegend=False, 
-                     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
-    
+
+    # Edges
+    fig.add_trace(go.Scatter(
+        x=edge_x, y=edge_y,
+        mode='lines',
+        line=dict(width=2, color='rgba(180,180,180,0.7)'),
+        hoverinfo='none',
+        showlegend=False
+    ))
+
+    # Evidence nodes
+    fig.add_trace(go.Scatter(
+        x=ev_x,
+        y=ev_y,
+        mode='markers+text',
+        marker=dict(
+            symbol='circle',
+            size=36,
+            color='#1565C0',
+            line=dict(color='white', width=2)
+        ),
+        text=[f'EV{i+1}' for i in range(n)],
+        textposition='top center',
+        customdata=[ev[:200] for ev in clean_ev],
+        hovertemplate='<b>Evidence %{text}</b><br>%{customdata}<extra></extra>',
+        name='Evidence'
+    ))
+
+    # Claim node
+    fig.add_trace(go.Scatter(
+        x=[0.0],
+        y=[0.0],
+        mode='markers+text',
+        marker=dict(
+            symbol='circle',
+            size=52,
+            color='#C62828',
+            line=dict(color='white', width=3)
+        ),
+        text=['CLAIM'],
+        textposition='top center',
+        customdata=[claim[:200]],
+        hovertemplate='<b>Claim</b><br>%{customdata}<extra></extra>',
+        name='Claim'
+    ))
+
+    fig.update_layout(
+        title=dict(text='🕸️ Claim-Evidence Graph', font=dict(size=18, color='white')),
+        height=550,
+        hovermode='closest',
+        showlegend=True,
+        margin=dict(l=20, r=20, t=60, b=20),
+        plot_bgcolor='#1E1E2E',
+        paper_bgcolor='#1E1E2E',
+        font=dict(color='white', size=12),
+        legend=dict(
+            bgcolor='#2D2D3F',
+            bordercolor='#666',
+            borderwidth=1,
+            font=dict(color='white')
+        ),
+        xaxis=dict(showgrid=False, zeroline=False,
+                   showticklabels=False, range=[-4, 4]),
+        yaxis=dict(showgrid=False, zeroline=False,
+                   showticklabels=False, range=[-4, 4])
+    )
+
     return fig
 
 def create_metrics_dashboard():
@@ -755,7 +810,7 @@ def create_metrics_dashboard():
         st.metric("F1-Score", f"{st.session_state.performance_metrics['f1']:.1f}%", "↑0.3%")
 
 def show_claim_history():
-    st.sidebar.title("🧠 Hallucination Detection in LLM using GNN")
+    st.sidebar.title(" Hallucination Detection in LLM using GNN")
     st.sidebar.markdown("---")
     
     # About Section
@@ -865,7 +920,7 @@ def show_claim_history():
     """)
 
 # Main UI
-st.title("🧠 Hallucination Detection in LLM using GNN")
+st.title("Hallucination Detection in LLM using GNN")
 st.write("Advanced Graph Neural Network system for detecting hallucinations and false claims in Large Language Model outputs")
 
 show_claim_history()
@@ -874,6 +929,22 @@ tab1, tab2, tab3, tab4 = st.tabs(["🔍 Single Analysis", "📊 Batch Processing
 
 with tab1:
     st.subheader("Single Claim Analysis")
+
+    # Debug test
+    if st.button("🧪 Test Wikipedia Connection"):
+        try:
+            import wikipedia
+            r = wikipedia.summary("Python programming language", sentences=2)
+            st.success(f"✅ Wikipedia works! Sample: {r[:200]}")
+        except Exception as e:
+            st.error(f"❌ Wikipedia error: {e}")
+            try:
+                import requests
+                r = requests.get("https://en.wikipedia.org/api/rest_v1/page/summary/Python_(programming_language)", timeout=5)
+                data = r.json()
+                st.success(f"✅ Requests API works: {data.get('extract','')[:200]}")
+            except Exception as e2:
+                st.error(f"❌ Requests also failed: {e2}")
     
     claim = st.text_area("Enter Claim:", height=100, 
                        placeholder="Example: The Eiffel Tower was built in 1889.")
@@ -894,12 +965,73 @@ with tab1:
                 if is_adversarial:
                     st.error(f"⚠️ {adv_msg}")
                     st.stop()
-            
-            # Fetch evidence
-            with st.spinner("Fetching evidence..."):
-                evidence_list = cached_wikipedia_evidence(claim, sentences=5)
-            
-            if not evidence_list:
+
+            # Fetch evidence with multiple fallback attempts
+            with st.spinner("Fetching evidence from Wikipedia..."):
+                evidence_list = []
+                key_entity = extract_key_entities(claim)
+
+                # Attempt 1: wikipedia package with key entity
+                try:
+                    summary = wikipedia.summary(key_entity, sentences=5)
+                    if summary:
+                        evidence_list = [s.strip() for s in summary.split('. ') if len(s.strip()) > 15]
+                except:
+                    pass
+
+                # Attempt 2: wikipedia search
+                if not evidence_list:
+                    try:
+                        results = wikipedia.search(claim, results=3)
+                        if results:
+                            summary = wikipedia.summary(results[0], sentences=5)
+                            if summary:
+                                evidence_list = [s.strip() for s in summary.split('. ') if len(s.strip()) > 15]
+                    except:
+                        pass
+
+                # Attempt 3: Direct Wikipedia REST API via requests (most reliable)
+                if not evidence_list:
+                    try:
+                        import requests as req
+                        search_term = key_entity.replace(' ', '_')
+                        url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{search_term}"
+                        resp = req.get(url, timeout=8, headers={'User-Agent': 'HallucinationDetector/1.0'})
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            extract = data.get('extract', '')
+                            if extract:
+                                evidence_list = [s.strip() for s in extract.split('. ') if len(s.strip()) > 15]
+                    except:
+                        pass
+
+                # Attempt 4: Wikipedia search API
+                if not evidence_list:
+                    try:
+                        import requests as req
+                        search_url = "https://en.wikipedia.org/w/api.php"
+                        params = {
+                            'action': 'query', 'list': 'search',
+                            'srsearch': claim, 'format': 'json', 'srlimit': 1
+                        }
+                        resp = req.get(search_url, params=params, timeout=8)
+                        if resp.status_code == 200:
+                            results = resp.json().get('query', {}).get('search', [])
+                            if results:
+                                title = results[0]['title'].replace(' ', '_')
+                                url2 = f"https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
+                                resp2 = req.get(url2, timeout=8)
+                                if resp2.status_code == 200:
+                                    extract = resp2.json().get('extract', '')
+                                    if extract:
+                                        evidence_list = [s.strip() for s in extract.split('. ') if len(s.strip()) > 15]
+                    except:
+                        pass
+
+            if evidence_list:
+                st.success(f"✅ Fetched {len(evidence_list)} evidence sentences from Wikipedia")
+            else:
+                st.warning("⚠️ No evidence found")
                 evidence_list = ["No evidence found."]
             
             # Load models
@@ -950,15 +1082,14 @@ with tab1:
             pred_idx = torch.argmax(probs).item()
             pred_label = LABELS[pred_idx]
             confidence = float(probs[pred_idx]) * 100
-            
-            # Critical fix: Only apply threshold to weak predictions
-            if confidence < 50 and pred_label != "REFUTES":  # Don't override strong REFUTES
+
+            # Override with myth detection
+            if is_myth:
+                pred_label = "REFUTES"
+                confidence = 95.0
+            elif confidence < 50 and pred_label != "REFUTES":
                 pred_label = "NOT_ENOUGH_INFO"
-            
-            # Calibrate confidence
-            if enable_calibration:
-                evidence_quality = min(1.0, len(evidence_list) / 5)
-                confidence = calibrate_confidence(confidence/100, claim, evidence_quality) * 100
+                confidence = max(confidence, 50.0)
             
             # Store in history
             st.session_state.claim_history.append({
@@ -989,20 +1120,98 @@ with tab1:
             
             with col2:
                 st.subheader("📊 Analysis Details")
-                st.metric("Trust Score", f"{confidence:.1f}%")
-                st.metric("Evidence Quality", f"{min(1.0, len(evidence_list) / 5):.2f}")
+
+                evidence_quality = min(1.0, len([e for e in evidence_list if e != "No evidence found."]) / 5)
+
+                # Trust score = how factually trustworthy the CLAIM is
+                # REFUTES = claim is false = LOW trust score
+                # SUPPORTS = claim is true = HIGH trust score
+                # NOT_ENOUGH_INFO = unknown = MEDIUM trust score
+                if pred_label == "REFUTES":
+                    trust_score = max(5.0, 100.0 - confidence)  # e.g. 98% confident REFUTES -> 2% trust
+                    # But cap minimum display at 5 and show it meaningfully
+                    trust_score = round(100.0 - confidence, 1)
+                    trust_score = max(5.0, trust_score)
+                elif pred_label == "SUPPORTS":
+                    trust_score = min(95.0, confidence * evidence_quality)
+                else:
+                    trust_score = 50.0
+
+                if trust_score >= 70:
+                    trust_color = "#4CAF50"
+                    trust_label = "✅ High Trust - Claim appears factual"
+                elif trust_score >= 40:
+                    trust_color = "#FF9800"
+                    trust_label = "⚠️ Medium Trust - Partially verified"
+                else:
+                    trust_color = "#F44336"
+                    trust_label = "❌ Low Trust - Likely Hallucination"
+
+                st.markdown(
+                    f"""
+                    <div style="
+                        background: linear-gradient(135deg, #1a237e, #283593);
+                        border-radius: 12px;
+                        padding: 20px;
+                        text-align: center;
+                        margin-bottom: 12px;
+                    ">
+                        <div style="color:#90CAF9; font-size:14px; margin-bottom:6px;">Trust Score</div>
+                        <div style="color:{trust_color}; font-size:42px; font-weight:bold;">{trust_score:.1f}%</div>
+                        <div style="color:{trust_color}; font-size:13px;">{trust_label}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                st.metric("Evidence Quality", f"{evidence_quality:.2f}")
+                st.metric("Evidence Count", len([e for e in evidence_list if e != "No evidence found."]))
                 st.write("**Explanation:**")
-                st.write(f"Analysis based on {len(evidence_list)} evidence sentences using ensemble model.")
+                if pred_label == "REFUTES":
+                    st.write(f"❌ Hallucination detected with {confidence:.1f}% confidence based on {len(evidence_list)} evidence sentences.")
+                elif pred_label == "SUPPORTS":
+                    st.write(f"✅ Claim supported by {len(evidence_list)} evidence sentences with {confidence:.1f}% confidence.")
+                else:
+                    st.write(f"⚠️ Insufficient evidence to verify this claim.")
             
             # Graph visualization
             st.subheader("🕸️ Claim-Evidence Graph")
-            fig = visualize_claim_evidence_graph(claim, evidence_list[:5])
+            graph_evidence = [ev for ev in evidence_list if ev and ev.strip() and ev != "No evidence found."]
+            if not graph_evidence:
+                graph_evidence = ["Evidence 1: No Wikipedia data found",
+                                  "Evidence 2: Try a different claim",
+                                  "Evidence 3: Check internet connection"]
+            fig = visualize_claim_evidence_graph(claim, graph_evidence[:5])
             st.plotly_chart(fig, use_container_width=True)
-            
-            # Evidence details
+
+            # Evidence Sources
             st.subheader("📄 Evidence Sources")
-            for i, evidence in enumerate(evidence_list, 1):
-                st.write(f"**{i}.** {evidence}")
+            display_ev = [ev for ev in evidence_list if ev and ev.strip() and ev != "No evidence found."]
+            if display_ev:
+                for i, evidence in enumerate(display_ev, 1):
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+                            border-left: 5px solid #42A5F5;
+                            border-radius: 10px;
+                            padding: 14px 18px;
+                            margin-bottom: 12px;
+                            color: #E3F2FD;
+                            font-size: 14px;
+                            line-height: 1.6;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        ">
+                            <div style="color:#90CAF9; font-weight:bold; font-size:13px; margin-bottom:6px;">
+                                📖 Evidence {i}
+                            </div>
+                            {evidence}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.warning("⚠️ No evidence found. Try a more specific claim or check your internet connection.")
 
 with tab2:
     st.subheader("📊 Batch Processing")
