@@ -1,4 +1,4 @@
-# 🧠 Enhanced LLM Hallucination Detection System
+# Enhanced LLM Hallucination Detection System
 
 A comprehensive, production-ready system for detecting hallucinations in Large Language Model outputs using advanced Graph Neural Networks, ensemble methods, and multi-source evidence validation.
 
@@ -282,8 +282,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 For questions, issues, or contributions:
-- **Email**: support@hallucination-detection.com
-- **GitHub Issues**: [Create an issue](https://github.com/your-repo/issues)
+- **Email**: jaiswalvivek421@gmail.com
+- **GitHub Issues**: [Create an issue](https://github.com/vivekjais03/hallucination_detection/issues)
 - **Documentation**: [Full documentation](https://docs.hallucination-detection.com)
 
 ---
