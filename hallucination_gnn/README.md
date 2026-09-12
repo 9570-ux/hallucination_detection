@@ -1,19 +1,17 @@
-# 🧠 Enhanced LLM Hallucination Detection System using GNN
+# Enhanced LLM Hallucination Detection System using GNN
 
 > A comprehensive, production-ready system for detecting hallucinations in Large Language Model outputs using advanced **Graph Attention Networks (GAT)**, ensemble methods, and multi-source evidence validation from Wikipedia REST API, Wikidata, and more.
 
 ---
 
-## 👥 Contributors
+##  Contributors
 
-| Name | Role |
-|---|---|
-| **Vivek Jaiswal** | Lead Developer & Researcher |
-| **Abhishek Bapna** | Co-Developer & Researcher |
+ **Vivek Jaiswal** 
+ **Abhishek Bapna** 
 
 ---
 
-## 📌 Project Overview
+## Project Overview
 
 Large Language Models (LLMs) often generate factually incorrect information — known as **hallucinations**. This system automatically detects such hallucinations by:
 
@@ -25,7 +23,7 @@ Large Language Models (LLMs) often generate factually incorrect information — 
 
 ---
 
-## 🚀 Features
+##  Features
 
 ### Core Capabilities
 - **Graph Neural Network Analysis** — Advanced GAT-based architecture for claim-evidence relationship modeling
@@ -51,7 +49,7 @@ Large Language Models (LLMs) often generate factually incorrect information — 
 
 ---
 
-## 📊 Classifications
+##  Classifications
 
 | Label | Trust Score | Meaning |
 |---|---|---|
